@@ -1,0 +1,42 @@
+# base image derivaiton 
+FROM nvcr.io/nvidia/pytorch:21.08-py3
+
+# timezone handler 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Paris
+
+# initial system requirements 
+RUN apt-get update --fix-missing &&\ 
+    apt-get install --yes --no-install-recommends \
+        tzdata dialog apt-utils git curl gcc wget pkg-config build-essential
+
+# user creation 
+RUN useradd --gid root --create-home solver
+WORKDIR /home/solver 
+
+# virtualenv initialization 
+ENV VIRTUAL_ENV="/opt/venv"
+RUN chmod -R g+rwx /home/solver && python -m venv $VIRTUAL_ENV --system-site-packages 
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# pull requirements 
+COPY requirements-gpu.txt ./ 
+
+# install requirements 
+RUN pip install -U pip && pip install -r requirements-gpu.txt 
+
+# pull sources 
+COPY . ./ 
+
+# environment variables 
+ENV SPACE="space"
+ENV MODELS="${SPACE}/models"
+ENV DATASET="${SPACE}/dataset"
+ENV FEATURES="${SPACE}/features"
+ENV EXTRACTORS="${MODELS}/extractors"
+ENV CHECKPOINTS="${MODELS}/checkpoints"
+
+
+# script 
+ENTRYPOINT [ "python", "main.py" ]
+CMD ["--help"]
